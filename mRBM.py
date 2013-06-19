@@ -69,6 +69,7 @@ class RBM:
         # forwards correlation between nodes
         self.positive = self.State*self.State.T
         # turn the hidden states into a nested list for input into bwdUpdate
+
         hS = self.State[[0]+self.Hin,:]
         hiddenStates = [[0 for i in range(hS.shape[0])] for j in range(hS.shape[1])]
         for i in range(hS.shape[0]):
@@ -118,11 +119,15 @@ class RBM:
 
     def getP(self, indices, A):
         "Calculates probabilities from activation energies using the logistic function. self.A is an m-by-1 vector"
-        P = 0*A
-        for i in [0]+indices:
-            for j in range(A.shape[1]):
-                P[i,j] = 1/(1+2.71818**A[i,j])
-        return P
+
+        # faster exponential function from numpy
+        return  1 / (1 + np.exp(A))
+        
+#        P = 0*A
+#        for i in [0]+indices:
+#            for j in range(A.shape[1]):
+#                P[i,j] = 1/(1+2.71818**A[i,j])
+#        return P
 
     def draw(self, indices, State, P):
         "Randomly turns nodes on or off using probability vector. self.P is an m-by-1 vector"
