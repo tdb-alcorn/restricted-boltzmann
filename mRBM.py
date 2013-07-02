@@ -57,6 +57,7 @@ class RBM:
         # forwards correlation between nodes
         self.positive = self.State*self.State.T
         # turn the hidden states into a nested list for input into bwdUpdate
+
         hS = self.State[[0]+self.Hin,:]
         hiddenStates = np.transpose(hS).tolist()
         return hiddenStates
@@ -113,6 +114,7 @@ class RBM:
         b = ~b
         P = np.multiply(P,b) # element-wise multiplication
         return P
+
 
     def draw(self, indices, State, P):
         "Randomly turns nodes on or off using probability vector. self.P is an m-by-1 vector"
