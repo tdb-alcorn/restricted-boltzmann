@@ -1,0 +1,49 @@
+#Initial idea from David Warde-Farley on the SciPy Cookbook
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
+from matplotlib.ticker import NullLocator
+#from matplotlib.collections import RegularPolyCollection
+#from matplotlib.colors import BoundaryNorm, ListedColormap
+
+def setupHinton(W, maxWeight=None, ax=None):
+    if not ax:
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+
+    if not maxWeight:
+        maxWeight = 2**np.ceil(np.log(np.abs(W).max())/np.log(2))
+
+    ax.patch.set_facecolor('gray')
+    ax.set_aspect('equal', 'box')
+    ax.xaxis.set_major_locator(NullLocator())
+    ax.yaxis.set_major_locator(NullLocator())
+    plt.title('RBM Weight Matrix')
+    return fig, ax, maxWeight
+    
+
+def hinton(W, fig, ax, maxWeight):
+    """
+    Draws a Hinton diagram for visualizing a weight matrix.
+    """
+    fig.visible(True)
+    for (x,y),w in np.ndenumerate(W):
+        if w > 0: color = 'white'
+        else:     color = 'black'
+        size = np.sqrt(np.abs(w))
+        rect = Rectangle([x - size / 2, y - size / 2], size, size,
+            facecolor=color, edgecolor=color)
+        ax.add_patch(rect)
+    ax.autoscale_view()
+
+    # Reverse the yaxis limits
+    ax.set_ylim(*ax.get_ylim()[::-1])
+
+    return fig, ax, maxWeight
+
+if __name__ == '__main__':
+    W = np.matrix([[1,2,3],[4,5,6],[7,8,9]])
+    fig, ax, maxWeight = setupHinton(W)
+    hinton(W, fig, ax, maxWeight)
+
+

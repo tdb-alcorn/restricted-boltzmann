@@ -1,0 +1,147 @@
+# This script tests how varying the number of hidden nodes affects the performance of the network. After messing with these tests a little, I intend to write a new set of methods that make analysing RBM performance easier and more automated. 
+
+
+from mRBM import *
+from sklearn import datasets
+
+#
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
+from matplotlib.ticker import NullLocator
+from pylab import imshow, cm
+import itertools
+#
+
+plt.ion()
+
+digits = datasets.load_digits()
+data = digits.images.reshape((digits.images.shape[0], -1))
+data = data.tolist()
+
+##
+figR = plt.figure('Reshape Test')
+ax1 = figR.add_subplot(1, 3, 1)
+imshow(digits.images[0], cmap=cm.gray_r)
+ax2 = figR.add_subplot(1,3,2)
+A = digits.images[0].reshape((16,-1))
+imshow(A, cmap=cm.gray_r)
+ax3 = figR.add_subplot(1,3,3)
+imshow(A.reshape((8,-1)), cmap=cm.gray_r)
+
+
+
+def findDigits(net):
+    # make all possible hidden state macro-states
+    allStates = np.matrix(list(itertools.product([1,0],repeat = net.nH))).T
+    hiddenStates = np.insert(allStates,0,1,axis=0)
+    hiddenStates = hiddenStates.T.tolist()
+    State, A, P = net.bwdOutput(hiddenStates)
+    Pin = np.transpose(P[net.Iin,:])
+    energies = net.FreeEnergy(Pin.tolist())
+    enSortInds = np.argsort(energies)
+    energiesList = energies.tolist()[0]
+    enPlotData = [energiesList[i] for i in enSortInds.tolist()[0]]
+    plt.figure('Free Energies of Back-Propped Hidden States')
+    plt.clf()
+    plt.plot(range(1,len(enPlotData)+1), enPlotData,'r.-')
+    #digits = Pin[enSortInds[0,range(100,1100,100)].tolist()[0],:]
+    digits = Pin[enSortInds.tolist()[0],:]
+    return digits
+
+def digitPlot(net, digFig, digits):
+    plt.figure('Digit Guesses')
+    plt.clf()
+    for i in range(2**net.nH):
+        digAx = digFig.add_subplot(2, 2**net.nH/2, i+1)
+        imshow(digits[i].reshape((8,-1)), cmap=cm.gray_r)
+    plt.show()
+    return digFig
+    
+
+
+################ create a 64 by 4 RBM ###################
+
+numInputNodes = 64
+numHiddenNodes = 4
+
+# Experiment 1: Examine the performance of the RBM as training continues. Find a way to decide when it has been trained optimally (i.e. not over-trained and not under-trained -> goldilocks zone).
+
+learningRate = 0.05
+numEpochs = 1000
+
+cut = int(len(data)*0.9)
+
+trainingData = data[0:cut]
+validationData = data[cut:len(data)]
+#
+
+#raw_input()
+
+#print len(data), len(data[0])
+#print len(trainingData)
+#print len(validationData)
+
+UpdateTime = 1
+myNet = RBM(numInputNodes,numHiddenNodes,learningRate)
+
+digFig = plt.figure('Digit Guesses')
+
+fig = plt.figure('Weight Matrix & Graphs')
+ax = fig.add_subplot(1, 3, 1)
+plt.title('RBM Weight Matrix')
+# Reverse the yaxis limits
+ax.set_ylim(*ax.get_ylim()[::-1])
+enAx = fig.add_subplot(1,3,2)
+enDiffAx = fig.add_subplot(1,3,3)
+timeSeries = []
+energyDiff = []
+free = []
+train = []
+
+
+for i in range(numEpochs/UpdateTime):
+    digFig = digitPlot(myNet, digFig, findDigits(myNet))
+    #setup the weight matrix plot
+    ax.clear()
+    ax.patch.set_facecolor('gray')
+    ax.set_aspect('equal', 'box')
+    ax.xaxis.set_major_locator(NullLocator())
+    ax.yaxis.set_major_locator(NullLocator())
+    # setup the energy time series plot
+    # do the calcs
+    print myNet.theWeights()
+    W = matRound(myNet.weights,3)[[0]+myNet.Iin,:][:,[0]+myNet.Hin].T
+    maxWeight = 2**np.ceil(np.log(np.abs(W).max())/np.log(2))
+    maxWeight = np.abs(W).max()+1
+    for (x,y),w in np.ndenumerate(W):
+        if w > 0: color = 'white'
+        else:     color = 'black'
+        size = np.log10(np.abs(w)+1)/np.log10(maxWeight)+0.05
+        rect = Rectangle([x - size / 2, y - size / 2], size, size,
+            facecolor=color, edgecolor=color)
+        ax.add_patch(rect)
+    ax.autoscale_view()
+    #
+    plt.draw()
+    avgFreeTrain = matRound(np.average(np.average(myNet.FreeEnergy(trainingData), axis=0), axis=1),1)
+    freeValid = matRound(np.average(myNet.FreeEnergy(validationData), axis=1),1)
+    diffs = freeValid-avgFreeTrain
+    print "Avg Free Energies (training data): ", avgFreeTrain
+    print "Free Energies (validation data): ", freeValid
+    print "Free Energy diff (valid-train): ", diffs
+    # train the Net
+    myNet.Train(trainingData, UpdateTime, n=i)
+    # plotting useful stuff for machine learning progress tracking
+    timeSeries += [i*UpdateTime]
+    energyDiff += [diffs[0,0]]
+    free += [freeValid[0,0]]
+    train += [avgFreeTrain[0,0]]
+    enAx.clear()
+    enDiffAx.clear()
+    enAx.plot(timeSeries, free, 'r-', label='Validation Energy')
+    enAx.plot(timeSeries, train, 'b-', label='Training Energy')
+    enDiffAx.plot(timeSeries, energyDiff, 'g-', label='Free Energy Diff (Valid-Train)')
+    enAx.legend()
+    enDiffAx.legend()
+print myNet.theWeights()        
+

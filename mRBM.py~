@@ -28,7 +28,7 @@ class RBM:
         for i in self.Hin:
             State = np.insert(State,1,off,axis=0)
         # activation energies, W*S = A
-        #A = -1*self.weights*State
+        A = -1*self.weights*State
         A = self.weights*State
         # probability vector, P = logistic(A)
         P = self.getP(self.Hin, A) #only update the hidden nodes
@@ -43,7 +43,7 @@ class RBM:
         # insert dummy "off" states for input nodes
         State = np.append(State,off*np.ones([self.nI,State.shape[1]]),axis=0)
         # activation energies, W*S = A
-        #A = -1*self.weights*State
+        A = -1*self.weights*State
         A = self.weights*State
         # probability vector, P = logistic(A)
         P = self.getP(self.Iin, A) #only update the input nodes
